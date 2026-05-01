@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - CareClinic</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-brand">CareClinic Doctor</div>
+        <div class="nav-links">
+            <button onclick="logout()" class="btn btn-sm btn-outline" style="border-color: rgba(255,255,255,0.5); color: white;">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Doctor Dashboard</h1>
+        <a href="api/export_csv.php" class="btn" style="background: var(--success); color: white;">Export CSV</a>
+    </div>
+
+    <div class="grid-3">
+        <!-- Left Col: Today's Appointments -->
+        <div style="grid-column: span 1;">
+            <div class="card">
+                <h2 class="card-title mb-2" style="font-size: 1.25rem;">Today's Appointments</h2>
+                <div id="todayAppointments">
+                    <p style="font-size: 0.875rem;">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Col: Patient List (Cards) -->
+        <div style="grid-column: span 2;">
+            <div class="card">
+                <h2 class="card-title mb-2" style="font-size: 1.25rem;">Your Patients</h2>
+                <div id="patientList" class="grid-2">
+                    <p style="font-size: 0.875rem;">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Details Modal -->
+<div id="patientModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalPatientName">Patient Details</h2>
+            <button onclick="closeModal()" class="close-btn">&times;</button>
+        </div>
+        
+        <div class="modal-body grid-2">
+            <!-- Info & History -->
+            <div>
+                <h3 style="margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;">Basic Info</h3>
+                <div id="modalPatientInfo" style="font-size: 0.875rem; margin-bottom: 1.5rem; line-height: 1.8;"></div>
+
+                <h3 style="margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;">Previous Records</h3>
+                <div id="modalPatientRecords" style="font-size: 0.875rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </div>
+
+            <!-- Add New Record Form -->
+            <div style="background: var(--background); padding: 1.5rem; border-radius: 0.5rem;">
+                <h3 style="margin-bottom: 1rem;">Add Medical Record</h3>
+                <form id="addRecordForm">
+                    <input type="hidden" id="recordPatientId" name="patient_id">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Link Appointment (Optional)</label>
+                        <select id="recordAppointmentId" name="appointment_id" class="form-control">
+                            <option value="">-- None --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Diagnosis</label>
+                        <input type="text" name="diagnosis" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Prescription</label>
+                        <textarea name="prescription" required rows="3" class="form-control"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+
+                    <div id="recordMsg" class="alert hidden"></div>
+
+                    <button type="submit" class="btn btn-secondary btn-block">Save Record</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadDashboard() {
+        try {
+            const res = await fetch('api/get_patients.php');
+            const data = await res.json();
+            
+            if(data.success) {
+                const todayContainer = document.getElementById('todayAppointments');
+                todayContainer.innerHTML = '';
+                if(data.today_appointments.length === 0) {
+                    todayContainer.innerHTML = '<p style="font-size: 0.875rem;">No appointments for today.</p>';
+                } else {
+                    data.today_appointments.forEach(app => {
+                        let t = new Date('1970-01-01T' + app.appointment_time + 'Z').toLocaleTimeString('en-US', {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'});
+                        let statusClass = app.status === 'Completed' ? 'status-completed' : 'status-pending';
+                        
+                        todayContainer.innerHTML += `
+                            <div class="list-item">
+                                <div>
+                                    <div class="list-title">${app.patient_name}</div>
+                                    <div class="list-subtitle">${t}</div>
+                                </div>
+                                <span class="${statusClass}">${app.status}</span>
+                            </div>
+                        `;
+                    });
+                }
+
+                const patientContainer = document.getElementById('patientList');
+                patientContainer.innerHTML = '';
+                if(data.patients.length === 0) {
+                    patientContainer.innerHTML = '<p style="font-size: 0.875rem;">You have no patients yet.</p>';
+                } else {
+                    data.patients.forEach(p => {
+                        patientContainer.innerHTML += `
+                            <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 0.5rem; cursor: pointer; background: white;" onclick="openPatientModal(${p.id})">
+                                <h3 style="font-size: 1rem; margin-bottom: 0.25rem;">${p.name}</h3>
+                                <p style="font-size: 0.75rem; margin-bottom: 0.5rem;">${p.age || 'N/A'} yrs • ${p.gender || 'N/A'}</p>
+                                <p style="font-size: 0.75rem;"><strong>Contact:</strong> ${p.contact_number || 'N/A'}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                if(data.message === 'Unauthorized') window.location.href = 'login_doctor.html';
+            }
+        } catch(e) {
+            console.error("Dashboard error");
+        }
+    }
+
+    async function openPatientModal(id) {
+        document.getElementById('patientModal').classList.remove('hidden');
+        document.getElementById('modalPatientInfo').innerHTML = 'Loading...';
+        document.getElementById('modalPatientRecords').innerHTML = '';
+        document.getElementById('recordAppointmentId').innerHTML = '<option value="">-- None --</option>';
+        document.getElementById('addRecordForm').reset();
+        document.getElementById('recordMsg').classList.add('hidden');
+        document.getElementById('recordPatientId').value = id;
+
+        try {
+            const res = await fetch(`api/get_patient_details.php?id=${id}`);
+            const data = await res.json();
+            
+            if(data.success) {
+                const info = data.info;
+                document.getElementById('modalPatientName').textContent = info.name;
+                document.getElementById('modalPatientInfo').innerHTML = `
+                    <p><strong>Age:</strong> ${info.age}</p>
+                    <p><strong>Gender:</strong> ${info.gender}</p>
+                    <p><strong>Contact:</strong> ${info.contact_number}</p>
+                    <p><strong>Email:</strong> ${info.email}</p>
+                    <p><strong>Address:</strong> ${info.address}</p>
+                `;
+
+                const appSelect = document.getElementById('recordAppointmentId');
+                data.appointments.forEach(app => {
+                    if(app.status === 'Scheduled') {
+                        let opt = document.createElement('option');
+                        opt.value = app.id;
+                        opt.textContent = `${app.appointment_date} at ${app.appointment_time}`;
+                        appSelect.appendChild(opt);
+                    }
+                });
+
+                const recContainer = document.getElementById('modalPatientRecords');
+                if(data.records.length === 0) {
+                    recContainer.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No previous records.</p>';
+                } else {
+                    data.records.forEach(r => {
+                        recContainer.innerHTML += `
+                            <div style="background: var(--background); padding: 0.75rem; border-radius: 0.25rem;">
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">${r.record_date}</p>
+                                <p><strong>Diagnosis:</strong> ${r.diagnosis}</p>
+                                <p><strong>Rx:</strong> ${r.prescription}</p>
+                                ${r.notes ? `<p style="color: var(--text-muted); margin-top: 0.25rem; font-style: italic;">${r.notes}</p>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('patientModal').classList.add('hidden');
+    }
+
+    document.getElementById('addRecordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const msg = document.getElementById('recordMsg');
+        
+        try {
+            const res = await fetch('api/add_record.php', { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            msg.className = 'alert';
+            if(data.success) {
+                msg.classList.add('alert-success');
+                msg.textContent = "Record added successfully!";
+                e.target.reset();
+                openPatientModal(formData.get('patient_id'));
+                loadDashboard();
+            } else {
+                msg.classList.add('alert-danger');
+                msg.textContent = data.message;
+            }
+        } catch(err) {
+            msg.className = 'alert alert-danger';
+            msg.textContent = "An error occurred.";
+        }
+    });
+
+    async function logout() {
+        await fetch('api/logout.php');
+        window.location.href = 'index.html';
+    }
+
+    loadDashboard();
+</script>
+
+</body>
+</html>
