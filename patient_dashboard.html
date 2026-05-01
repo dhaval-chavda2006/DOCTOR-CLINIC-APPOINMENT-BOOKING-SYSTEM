@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - CareClinic</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar patient-nav">
+    <div class="container">
+        <div class="navbar-brand">CareClinic Patient</div>
+        <div class="nav-links">
+            <a href="book_appointment.html" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Book Appointment</a>
+            <button onclick="logout()" class="btn btn-sm" style="background: white; color: var(--primary);">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>My Appointments</h1>
+        <a href="book_appointment.html" class="btn btn-primary">Book New</a>
+    </div>
+
+    <div class="card">
+        <div id="appointmentsList">
+            <p>Loading appointments...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadAppointments() {
+        try {
+            const res = await fetch('api/get_patient_appointments.php');
+            const data = await res.json();
+            
+            const container = document.getElementById('appointmentsList');
+            container.innerHTML = '';
+            
+            if (data.success) {
+                if (data.appointments.length === 0) {
+                    container.innerHTML = '<p class="text-center" style="color: var(--text-muted); padding: 2rem 0;">You have no appointments scheduled.</p>';
+                    return;
+                }
+                
+                data.appointments.forEach(app => {
+                    let timeString = new Date('1970-01-01T' + app.appointment_time + 'Z').toLocaleTimeString('en-US', {timeZone:'UTC',hour12:true,hour:'numeric',minute:'numeric'});
+                    let dateString = new Date(app.appointment_date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                    
+                    let statusClass = app.status === 'Completed' ? 'status-completed' : 'status-pending';
+
+                    container.innerHTML += `
+                        <div class="list-item">
+                            <div>
+                                <div class="list-title">Dr. ${app.doctor_name}</div>
+                                <div class="list-subtitle">${dateString} at ${timeString}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="${statusClass}" style="margin-bottom: 0.25rem;">${app.status}</div>
+                                <a href="api/generate_pdf.php?id=${app.id}" target="_blank" style="font-size: 0.75rem; text-decoration: underline;">Download PDF</a>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                if(data.message === 'Unauthorized') window.location.href = 'login_patient.html';
+                else container.innerHTML = '<p class="alert alert-danger">Failed to load appointments.</p>';
+            }
+        } catch (e) {
+            document.getElementById('appointmentsList').innerHTML = '<p class="alert alert-danger">An error occurred.</p>';
+        }
+    }
+
+    async function logout() {
+        await fetch('api/logout.php');
+        window.location.href = 'index.html';
+    }
+
+    loadAppointments();
+</script>
+
+</body>
+</html>
