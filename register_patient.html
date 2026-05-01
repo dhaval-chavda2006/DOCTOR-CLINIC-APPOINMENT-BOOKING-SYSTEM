@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Registration - CareClinic</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="flex-center py-4">
+    <div class="container" style="max-width: 600px;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Create Patient Account</h2>
+                <p>Join CareClinic to manage your appointments</p>
+            </div>
+
+            <form id="registerForm">
+                <input type="hidden" name="role" value="patient">
+                
+                <div id="errorMsg" class="alert alert-danger hidden"></div>
+                <div id="successMsg" class="alert alert-success hidden">Registration successful! Redirecting...</div>
+
+                <div class="grid-2">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="name" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" required class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" required minlength="6" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Age</label>
+                        <input type="number" name="age" required min="1" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <select name="gender" required class="form-control">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Contact Number</label>
+                        <input type="tel" name="contact_number" required class="form-control">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Address</label>
+                        <textarea name="address" required rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-2">Register Account</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Already have an account? <a href="login_patient.html">Login here</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        
+        errorMsg.classList.add('hidden');
+        successMsg.classList.add('hidden');
+
+        try {
+            const response = await fetch('api/register.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if(data.success) {
+                successMsg.classList.remove('hidden');
+                setTimeout(() => {
+                    window.location.href = 'login_patient.html';
+                }, 1500);
+            } else {
+                errorMsg.textContent = data.message || "Registration failed.";
+                errorMsg.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorMsg.textContent = "An error occurred. Please try again.";
+            errorMsg.classList.remove('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>
