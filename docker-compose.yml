@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # The Web Server (PHP + Apache)
+  web:
+    image: php:8.2-apache
+    container_name: clinic-app
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - db
+    networks:
+      - clinic-network
+
+  # The Database (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: clinic-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: clinic_db
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3306:3306"
+    networks:
+      - clinic-network
+
+networks:
+  clinic-network:
+    driver: bridge

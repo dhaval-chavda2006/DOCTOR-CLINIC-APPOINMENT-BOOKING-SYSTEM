@@ -1,5 +1,5 @@
 <?php
-$host = 'localhost';
+$host = 'db';
 $dbname = 'clinic_db';
 $username = 'root'; 
 $password = 'password'; // Default XAMPP password is empty
