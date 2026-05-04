@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - CareClinic</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container py-4">
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header">
+            <h2 class="card-title">Book New Appointment</h2>
+            <p>Please fill in the details below</p>
+        </div>
+
+        <form id="bookForm">
+            <div id="statusMsg" class="alert hidden"></div>
+
+            <div class="form-group">
+                <label class="form-label">Select Doctor</label>
+                <select name="doctor_id" id="doctorSelect" required class="form-control">
+                    <option value="">Loading doctors...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Appointment Date</label>
+                <input type="date" name="appointment_date" id="appointment_date" required class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Time Slot</label>
+                <select name="time_slot" required class="form-control">
+                    <option value="">Select a slot</option>
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="10:00 AM">10:00 AM</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="02:00 PM">02:00 PM</option>
+                    <option value="03:00 PM">03:00 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Symptoms / Reason</label>
+                <textarea name="symptoms" rows="3" class="form-control" placeholder="Briefly describe your symptoms..."></textarea>
+            </div>
+
+            <div class="flex-between mt-4">
+                <a href="patient_dashboard.html" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Confirm Booking</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 1. Set minimum date to today
+    const dateInput = document.getElementById('appointment_date');
+    dateInput.min = new Date().toISOString().split('T')[0];
+
+    // 2. Load Doctors on Page Load
+    async function loadDoctors() {
+        const select = document.getElementById('doctorSelect');
+        try {
+            const response = await fetch('api/get_doctors.php');
+            const doctors = await response.json();
+            
+            select.innerHTML = '<option value="">Choose your doctor</option>';
+            doctors.forEach(doc => {
+                select.innerHTML += `<option value="${doc.id}">Dr. ${doc.name}</option>`;
+            });
+        } catch (err) {
+            select.innerHTML = '<option value="">Error loading doctors</option>';
+        }
+    }
+
+    // 3. Handle Form Submission
+    document.getElementById('bookForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const statusMsg = document.getElementById('statusMsg');
+
+        try {
+            const response = await fetch('api/create_appointment.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if(data.success) {
+                statusMsg.className = "alert alert-success";
+                statusMsg.textContent = "Appointment booked successfully! Redirecting...";
+                statusMsg.classList.remove('hidden');
+                setTimeout(() => window.location.href = 'patient_dashboard.html', 2000);
+            } else {
+                statusMsg.className = "alert alert-danger";
+                statusMsg.textContent = data.message;
+                statusMsg.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    loadDoctors();
+</script>
+</body>
+</html>

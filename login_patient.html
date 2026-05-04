@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Login - CareClinic</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="flex-center py-4">
+    <div class="container" style="max-width: 450px;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Welcome Back</h2>
+                <p>Login to your patient portal</p>
+            </div>
+
+            <form id="loginForm">
+                <input type="hidden" name="role" value="patient">
+                
+                <div id="errorMsg" class="alert alert-danger hidden"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" required class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" required class="form-control">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block mt-2">Login</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Don't have an account? <a href="register_patient.html">Register here</a>
+            </p>
+            <p class="text-center mt-2" style="font-size: 0.875rem;">
+                <a href="index.html" style="color: var(--text-muted);">← Back to Home</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const errorMsg = document.getElementById('errorMsg');
+        
+        try {
+            const response = await fetch('api/login.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if(data.success) {
+                window.location.href = data.redirect;
+
+                // window.location.href = 'patient_dashboard.html';
+            } else {
+                errorMsg.textContent = data.message;
+                errorMsg.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorMsg.textContent = "An error occurred. Please try again.";
+            errorMsg.classList.remove('hidden');
+        }
+    });
+</script>
+
+</body>
+</html>
